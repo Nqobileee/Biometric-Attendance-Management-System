@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Smile Factory · Clock-In | ZB Innovation Hub</title>
+<title>Smile Factory · Hub Member Clock-In | ZB Innovation Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -69,10 +69,6 @@
     color:var(--ink);background:var(--lime-soft);border:1px solid #DCEBC2;
     padding:8px 14px;border-radius:999px;margin-left:14px;white-space:nowrap;
   }
-  @media (max-width:640px){
-    .liveclock{display:none}
-    .brand-text .sys{display:none}
-  }
 
   main{flex:1;width:100%;max-width:1060px;margin:0 auto;padding:clamp(20px,4vw,44px) clamp(16px,4vw,40px) 60px}
   .page{display:none;animation:fadein .35s ease}
@@ -118,6 +114,7 @@
     transition:transform .15s ease, box-shadow .25s ease;
     box-shadow:inset 0 2px 8px rgba(9,141,69,.07), 0 10px 28px -12px rgba(9,141,69,.35);
     touch-action:none;-webkit-tap-highlight-color:transparent;user-select:none;
+    -webkit-touch-callout:none;-webkit-user-select:none;
   }
   .pad:active{transform:scale(.97)}
   .pad:focus-visible{outline:3px solid var(--lime);outline-offset:4px}
@@ -246,10 +243,14 @@
 
   /* ---------- Mobile ---------- */
   @media (max-width:720px){
-    header{flex-wrap:wrap;gap:10px;padding:12px 14px}
-    .brand .logo,.brand .logo svg{height:34px}
-    nav{margin-left:auto;gap:4px}
-    .navbtn{padding:8px 13px;font-size:13px}
+    header{flex-wrap:wrap;row-gap:10px;column-gap:10px;padding:10px 14px 12px}
+    .brand{gap:10px}
+    .brand .logo,.brand .logo svg{height:32px}
+    .brand-text .sys{display:none}
+    .liveclock{margin-left:auto;font-size:12.5px;padding:7px 11px}
+    nav{order:3;width:100%;margin-left:0;gap:6px;
+        background:var(--green-soft);border:1px solid #D5E8DC;border-radius:999px;padding:4px}
+    .navbtn{flex:1;text-align:center;padding:9px 8px;font-size:13.5px}
     main{padding:18px 14px 48px}
     .scan-card{padding:28px 18px 26px;border-radius:20px}
     .pad-wrap{width:160px;height:160px;margin:24px auto 18px}
@@ -260,7 +261,11 @@
     .stats{grid-template-columns:repeat(2,1fr);gap:10px}
     .stat{padding:13px 14px}
     .stat .v{font-size:22px}
-    .toast{top:auto;bottom:16px;left:12px;right:12px;width:auto}
+    .toast{
+      top:auto;bottom:16px;left:12px;right:12px;width:auto;
+      transform:translateY(calc(100% + 40px));
+    }
+    .toast.show{transform:none}
 
     /* table becomes stacked cards */
     table{min-width:0}
@@ -344,7 +349,7 @@
 </svg></div>
     <div class="brand-text">
       <div class="hub display">ZB Innovation Hub</div>
-      <div class="sys">Smile Factory · Staff Clock-In</div>
+      <div class="sys">Smile Factory · Hub Member Clock-In</div>
     </div>
   </div>
   <nav aria-label="Pages">
@@ -364,7 +369,7 @@
     </div>
 
     <div class="scan-card">
-      <div class="scan-title display">Clock in with your fingerprint</div>
+      <div class="scan-title display">Hub members, clock in with your fingerprint</div>
       <p class="scan-sub">Tap the scanner — once the ring completes, you're clocked in</p>
 
       <div class="pad-wrap" id="padWrap">
@@ -396,7 +401,7 @@
     </div>
 
     <p class="roster-note">
-      Demo mode — each scan matches a sample Smile Factory team member, records their
+      Demo mode — each scan matches a sample ZB Innovation Hub member, records their
       clock-in time and saves it straight to the attendance dataset. No real biometric
       data is captured.
     </p>
@@ -417,7 +422,7 @@
 
     <div class="stats">
       <div class="stat"><div class="k">Clock-ins today</div><div class="v" id="stToday">0</div></div>
-      <div class="stat"><div class="k">On time</div><div class="v" id="stOnTime">0<small id="stOnTimePct"></small></div></div>
+      <div class="stat"><div class="k">On time</div><div class="v"><span id="stOnTime">0</span><small id="stOnTimePct"></small></div></div>
       <div class="stat"><div class="k">Total records</div><div class="v" id="stTotal">0</div></div>
       <div class="stat"><div class="k">Last clock-in</div><div class="v" id="stLast" style="font-size:18px">—</div></div>
     </div>
@@ -427,8 +432,8 @@
         <table aria-label="Attendance records">
           <thead>
             <tr>
-              <th>Team member</th>
-              <th>Staff ID</th>
+              <th>Hub member</th>
+              <th>Member ID</th>
               <th>Phone</th>
               <th>Date</th>
               <th>Clock-in</th>
@@ -574,40 +579,39 @@ ringProg.style.strokeDasharray = CIRC;
 ringProg.style.strokeDashoffset = CIRC;
 
 const SCAN_MS = 1500;
-let scanStart = null, raf = null, busy = false;
+let scanTimer = null, busy = false;
 
 function setRing(p){ ringProg.style.strokeDashoffset = CIRC * (1 - p); }
 
 function beginScan(){
   if(busy) return;
   busy = true;
-  scanStart = performance.now();
   padWrap.classList.add("scanning");
   padWrap.classList.remove("success");
   padHint.classList.remove("warn");
   padHint.textContent = "Scanning fingerprint…";
-  const step = (t)=>{
-    const p = Math.min((t - scanStart) / SCAN_MS, 1);
-    setRing(p);
-    if(p >= 1){ finishScan(); return; }
-    raf = requestAnimationFrame(step);
-  };
-  raf = requestAnimationFrame(step);
+  ringProg.style.transition = "none";
+  setRing(0);
+  ringProg.getBoundingClientRect(); // flush so the transition starts from 0
+  ringProg.style.transition = `stroke-dashoffset ${SCAN_MS}ms linear`;
+  setRing(1);
+  scanTimer = setTimeout(finishScan, SCAN_MS);
 }
 function finishScan(){
-  cancelAnimationFrame(raf);
+  clearTimeout(scanTimer);
   padWrap.classList.remove("scanning");
   padWrap.classList.add("success");
-  setRing(1);
-  registerClockIn(); // ring complete -> attendance logged
-  padHint.textContent = "Match found — attendance logged ✓";
+  const rec = registerClockIn(); // ring complete -> attendance logged
+  padHint.textContent = `Welcome, ${rec.first}! Attendance logged ✓`;
+  if(navigator.vibrate) navigator.vibrate([60, 40, 60]);
   setTimeout(()=>{
     busy = false;
     padWrap.classList.remove("success");
+    ringProg.style.transition = "none";
     setRing(0);
     padHint.textContent = "Tap to scan";
     padHint.classList.remove("warn");
-  }, 1800);
+  }, 2600);
 }
 
 pad.addEventListener("pointerdown", e => { e.preventDefault(); beginScan(); });
@@ -647,6 +651,7 @@ function registerClockIn(){
   saveRecords();
   renderData(true);
   showToast(rec);
+  return rec;
 }
 
 /* ================= Toast ================= */
@@ -675,11 +680,11 @@ function renderData(markNew){
     const tr = document.createElement("tr");
     if(markNew && i === 0) tr.classList.add("new");
     tr.innerHTML = `
-      <td data-label="Team member"><div class="person">
+      <td data-label="Hub member"><div class="person">
         <span class="avatar">${r.first[0]}${r.last[0]}</span>
         <span><span class="nm">${r.first} ${r.last[0]}.</span><div class="dept">${r.dept}</div></span>
       </div></td>
-      <td class="mono" data-label="Staff ID">${maskId(r.id)}</td>
+      <td class="mono" data-label="Member ID">${maskId(r.id)}</td>
       <td class="mono" data-label="Phone">${r.phone}</td>
       <td data-label="Date">${r.dateLabel}</td>
       <td data-label="Clock-in"><b>${r.time}</b></td>
@@ -702,7 +707,7 @@ function renderData(markNew){
 /* ================= Export & clear ================= */
 function exportCSV(){
   if(!records.length){ alert("No records to export yet — scan a fingerprint first!"); return; }
-  const head = "First name,Surname,Department,Staff ID (masked),Phone (masked),Date,Clock-in,Status";
+  const head = "First name,Surname,Department,Member ID (masked),Phone (masked),Date,Clock-in,Status";
   const rows = records.map(r =>
     [r.first, r.last, r.dept, maskId(r.id), r.phone, r.dateLabel, r.time, r.status]
       .map(v => `"${v}"`).join(","));
