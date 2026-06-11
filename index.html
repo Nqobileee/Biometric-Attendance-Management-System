@@ -243,6 +243,44 @@
   }
   footer .sep{opacity:.4}
   footer .right{margin-left:auto}
+
+  /* ---------- Mobile ---------- */
+  @media (max-width:720px){
+    header{flex-wrap:wrap;gap:10px;padding:12px 14px}
+    .brand .logo,.brand .logo svg{height:34px}
+    nav{margin-left:auto;gap:4px}
+    .navbtn{padding:8px 13px;font-size:13px}
+    main{padding:18px 14px 48px}
+    .scan-card{padding:28px 18px 26px;border-radius:20px}
+    .pad-wrap{width:160px;height:160px;margin:24px auto 18px}
+    .pad svg.fp{width:80px;height:80px}
+    .data-head{flex-direction:column;align-items:stretch;gap:12px}
+    .data-actions{margin-left:0}
+    .data-actions .btn{flex:1}
+    .stats{grid-template-columns:repeat(2,1fr);gap:10px}
+    .stat{padding:13px 14px}
+    .stat .v{font-size:22px}
+    .toast{top:auto;bottom:16px;left:12px;right:12px;width:auto}
+
+    /* table becomes stacked cards */
+    table{min-width:0}
+    thead{display:none}
+    table,tbody,tbody tr,tbody td{display:block;width:100%}
+    tbody tr{padding:12px 14px;border-bottom:1px solid var(--line)}
+    tbody tr:last-child{border-bottom:none}
+    tbody td{
+      border:none;padding:3px 0;white-space:normal;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+    }
+    tbody td::before{
+      content:attr(data-label);
+      font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);
+    }
+    tbody td:first-child{justify-content:flex-start;padding-bottom:7px}
+    tbody td:first-child::before{display:none}
+  }
+
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation-duration:.001s !important;transition-duration:.001s !important}
   }
@@ -327,7 +365,7 @@
 
     <div class="scan-card">
       <div class="scan-title display">Clock in with your fingerprint</div>
-      <p class="scan-sub">Press and hold the scanner until the ring completes</p>
+      <p class="scan-sub">Tap the scanner — once the ring completes, you're clocked in</p>
 
       <div class="pad-wrap" id="padWrap">
         <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
@@ -341,7 +379,7 @@
           <circle class="prog" id="ringProg" cx="110" cy="110" r="105"></circle>
         </svg>
 
-        <button class="pad" id="pad" aria-label="Fingerprint scanner — press and hold to clock in">
+        <button class="pad" id="pad" aria-label="Fingerprint scanner — tap to clock in">
           <span class="beam"></span>
           <svg class="fp" viewBox="0 0 100 100" fill="none" stroke-width="3.4" stroke-linecap="round" aria-hidden="true">
             <path d="M50 18c-17 0-30 13-30 30 0 9 2 17 5 24"/>
@@ -354,7 +392,7 @@
         </button>
       </div>
 
-      <p class="pad-hint" id="padHint">Touch &amp; hold to scan</p>
+      <p class="pad-hint" id="padHint">Tap to scan</p>
     </div>
 
     <p class="roster-note">
@@ -455,6 +493,32 @@ const CUTOFF = {h:8, m:30}; // on-time cutoff 08:30
 let records = [];
 let memoryOnly = false;
 
+/* ================= Dummy data ================= */
+function makeRecord(staffIdx, dayOffset, h, m){
+  const d = new Date();
+  d.setDate(d.getDate() - dayOffset);
+  d.setHours(h, m, 0, 0);
+  const s = STAFF[staffIdx];
+  const late = h > CUTOFF.h || (h === CUTOFF.h && m > CUTOFF.m);
+  return {
+    first: s.first, last: s.last, dept: s.dept, id: s.id, phone: s.phone,
+    day: dayKey(d),
+    dateLabel: d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"}),
+    time: d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"}),
+    status: late ? "Late" : "On time",
+    ts: d.getTime()
+  };
+}
+function seedDummyData(){
+  const seeds = [
+    // [staff index, days ago, hour, minute]
+    [0,0,7,52],[2,0,8,5],[5,0,8,14],[3,0,8,27],[6,0,8,41],
+    [1,1,7,58],[4,1,8,9],[7,1,8,22],[0,1,8,36],[5,1,8,55],
+    [3,2,7,49],[6,2,8,3],[2,2,8,18],[1,2,8,33],[4,2,8,47]
+  ];
+  return seeds.map(([s,o,h,m]) => makeRecord(s,o,h,m)).sort((a,b)=> b.ts - a.ts);
+}
+
 /* ================= Persistence ================= */
 async function loadRecords(){
   try{
@@ -463,6 +527,10 @@ async function loadRecords(){
       if(res && res.value) records = JSON.parse(res.value);
     } else memoryOnly = true;
   }catch(e){ records = records || []; }
+  if(!records.length){
+    records = seedDummyData();
+    saveRecords();
+  }
   renderData();
 }
 async function saveRecords(){
@@ -505,7 +573,7 @@ const CIRC = 2 * Math.PI * 105;
 ringProg.style.strokeDasharray = CIRC;
 ringProg.style.strokeDashoffset = CIRC;
 
-const SCAN_MS = 1700;
+const SCAN_MS = 1500;
 let scanStart = null, raf = null, busy = false;
 
 function setRing(p){ ringProg.style.strokeDashoffset = CIRC * (1 - p); }
@@ -517,7 +585,7 @@ function beginScan(){
   padWrap.classList.add("scanning");
   padWrap.classList.remove("success");
   padHint.classList.remove("warn");
-  padHint.textContent = "Scanning… keep your finger on the pad";
+  padHint.textContent = "Scanning fingerprint…";
   const step = (t)=>{
     const p = Math.min((t - scanStart) / SCAN_MS, 1);
     setRing(p);
@@ -526,38 +594,27 @@ function beginScan(){
   };
   raf = requestAnimationFrame(step);
 }
-function cancelScan(){
-  if(!busy) return;
-  cancelAnimationFrame(raf);
-  busy = false;
-  padWrap.classList.remove("scanning");
-  setRing(0);
-  padHint.textContent = "Almost! Hold a little longer next time";
-  padHint.classList.add("warn");
-  setTimeout(()=>{ padHint.textContent = "Touch & hold to scan"; padHint.classList.remove("warn"); }, 2200);
-}
 function finishScan(){
   cancelAnimationFrame(raf);
   padWrap.classList.remove("scanning");
   padWrap.classList.add("success");
   setRing(1);
-  registerClockIn();
+  registerClockIn(); // ring complete -> attendance logged
+  padHint.textContent = "Match found — attendance logged ✓";
   setTimeout(()=>{
     busy = false;
     padWrap.classList.remove("success");
     setRing(0);
-    padHint.textContent = "Touch & hold to scan";
+    padHint.textContent = "Tap to scan";
     padHint.classList.remove("warn");
   }, 1800);
 }
 
 pad.addEventListener("pointerdown", e => { e.preventDefault(); beginScan(); });
-pad.addEventListener("pointerup",   () => { if(busy && padWrap.classList.contains("scanning")) cancelScan(); });
-pad.addEventListener("pointerleave",() => { if(busy && padWrap.classList.contains("scanning")) cancelScan(); });
 pad.addEventListener("keydown", e => {
   if((e.key === "Enter" || e.key === " ") && !busy){
     e.preventDefault();
-    beginScan(); // keyboard users get an automatic full scan
+    beginScan();
   }
 });
 pad.addEventListener("contextmenu", e => e.preventDefault());
@@ -618,15 +675,15 @@ function renderData(markNew){
     const tr = document.createElement("tr");
     if(markNew && i === 0) tr.classList.add("new");
     tr.innerHTML = `
-      <td><div class="person">
+      <td data-label="Team member"><div class="person">
         <span class="avatar">${r.first[0]}${r.last[0]}</span>
         <span><span class="nm">${r.first} ${r.last[0]}.</span><div class="dept">${r.dept}</div></span>
       </div></td>
-      <td class="mono">${maskId(r.id)}</td>
-      <td class="mono">${r.phone}</td>
-      <td>${r.dateLabel}</td>
-      <td><b>${r.time}</b></td>
-      <td><span class="pill ${r.status === "Late" ? "late" : ""}">${r.status}</span></td>`;
+      <td class="mono" data-label="Staff ID">${maskId(r.id)}</td>
+      <td class="mono" data-label="Phone">${r.phone}</td>
+      <td data-label="Date">${r.dateLabel}</td>
+      <td data-label="Clock-in"><b>${r.time}</b></td>
+      <td data-label="Status"><span class="pill ${r.status === "Late" ? "late" : ""}">${r.status}</span></td>`;
     tbody.appendChild(tr);
   });
 
