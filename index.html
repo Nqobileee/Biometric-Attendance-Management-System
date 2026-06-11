@@ -228,9 +228,7 @@
     display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 11px;
     background:var(--lime-soft);color:var(--green-deep);border:1px solid #D8EAB8;
   }
-  .pill.late{background:#FEF4E6;color:#B4651A;border-color:#F4DDBC}
   .empty{padding:54px 20px;text-align:center;color:var(--muted)}
-  .empty .big{font-size:38px;margin-bottom:10px}
   .empty b{color:var(--ink)}
 
   footer{
@@ -370,7 +368,7 @@
 
     <div class="scan-card">
       <div class="scan-title display">Hub members, clock in with your fingerprint</div>
-      <p class="scan-sub">Tap the scanner — once the ring completes, you're clocked in</p>
+      <p class="scan-sub">Tap the scanner. Once the ring completes, you are clocked in.</p>
 
       <div class="pad-wrap" id="padWrap">
         <svg class="ring" viewBox="0 0 220 220" aria-hidden="true">
@@ -401,7 +399,7 @@
     </div>
 
     <p class="roster-note">
-      Demo mode — each scan matches a sample ZB Innovation Hub member, records their
+      Demo mode: each scan matches a sample ZB Innovation Hub member, records their
       clock-in time and saves it straight to the attendance dataset. No real biometric
       data is captured.
     </p>
@@ -484,13 +482,13 @@ const STAFF = [
 ];
 
 const SWEET = [
-  "So glad you're here — let's make today count! 🌱",
-  "Your smile powers the factory. Have a brilliant shift! ☀️",
-  "Great to see you. Go do amazing things today! 💚",
-  "Welcome in! May your coffee be strong and your ideas stronger. ☕",
-  "You showed up — that's already a win. Shine on! ✨",
-  "The hub is brighter with you in it. Have a lovely day! 🌿",
-  "Wishing you a smooth, joyful and productive day ahead! 🚀"
+  "So glad you're here. Let's make today count.",
+  "Your presence makes the day brighter.",
+  "Great to see you. Go do amazing things today.",
+  "Welcome in. May your coffee be strong and your ideas stronger.",
+  "You are here and that is a great start.",
+  "The hub is brighter with you in it. Have a lovely day.",
+  "Wishing you a smooth, joyful and productive day ahead."
 ];
 
 const STORAGE_KEY = "smile-factory-attendance";
@@ -602,7 +600,7 @@ function finishScan(){
   padWrap.classList.remove("scanning");
   padWrap.classList.add("success");
   const rec = registerClockIn(); // ring complete -> attendance logged
-  padHint.textContent = `Welcome, ${rec.first}! Attendance logged ✓`;
+  padHint.textContent = `Welcome, ${rec.first}! Attendance logged.`;
   if(navigator.vibrate) navigator.vibrate([60, 40, 60]);
   setTimeout(()=>{
     busy = false;
@@ -658,15 +656,15 @@ function registerClockIn(){
 let toastTimer = null;
 function showToast(rec){
   const t = document.getElementById("toast");
-  document.getElementById("toastTitle").textContent = `Welcome, ${rec.first}! You're clocked in 😊`;
+  document.getElementById("toastTitle").textContent = `Welcome, ${rec.first}! Your attendance has been recorded.`;
   document.getElementById("toastMeta").innerHTML =
     `<span>ID <b>${maskId(rec.id)}</b></span>` +
-    `<span>📱 <b>${rec.phone}</b></span>` +
-    `<span>⏰ <b>${rec.time}</b> · ${rec.status}</span>`;
+    `<span>Phone <b>${rec.phone}</b></span>` +
+    `<span>Time <b>${rec.time}</b></span>`;
   document.getElementById("toastSweet").textContent = SWEET[Math.floor(Math.random()*SWEET.length)];
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=> t.classList.remove("show"), 5600);
+  toastTimer = setTimeout(()=> t.classList.remove("show"), 10000);
 }
 
 /* ================= Dataset rendering ================= */
